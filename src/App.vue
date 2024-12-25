@@ -63,21 +63,40 @@
       <button @click="distilgpt2">問答</button>
     </section>
   </div>
+
+
+  <div class="chat-container">
+    <div class="chat-box" ref="chatBox">
+      <div v-for="(message, index) in messages" :key="index"
+        :class="['message', message.isUser ? 'user-message' : 'response-message']">
+        <div v-if="!message.isTyping" class="message-content"> {{ message.text }} </div>
+        <div v-else class="typing-indicator">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+    <div class="input-area">
+      <input v-model="userMessage" type="text" placeholder="輸入訊息..." @keyup.enter="sendMessage" class="input-box" />
+      <button @click="sendMessage" class="send-button">送出</button>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import HelloWorld from './components/HelloWorld.vue'
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, reactive, nextTick } from 'vue';
 import { pipeline, env } from '@xenova/transformers';
 
 // 定義問答對庫
 const faq = reactive([
   { question: "今天天氣如何?", answer: "今天是個晴朗的好天氣。" },
-  { question: "你好嗎?", answer: "我很好，謝謝你的關心！" },
+  // { question: "你好嗎?", answer: "我很好，謝謝你的關心！" },
   { question: "你的名字是什麼?", answer: "我是你的智能助手。" },
   { question: "如何新增用戶?", answer: "請至用戶管理頁面，新增人員，新增完畢臨時的密碼將會寄送至信箱，登入時再進行新密碼設定並登入" },
   { question: "如何修改使用者權限?", answer: "請至用戶管理頁面，選擇欲修改之人員，重新選擇權限，設定完成務必請該使用者重新登入，已使頁面權限生效" },
-  { question: "如何修改密碼密碼設定?", answer: "請至用戶管理頁面，選擇欲修改之人員，再行重新發送Email" },
+  { question: "如何修改密碼?", answer: "請至用戶管理頁面，選擇欲修改之人員，再行重新發送Email" },
   { question: "甚麼是角色管理?", answer: "角色管理是可自行新增角色，並設定此角色所能使用的頁面及權限" },
 ]);
 
@@ -129,7 +148,7 @@ const generateText = async () => {
         const questionVector = questionFeatures.data;
         const similarity = cosineSimilarity(inputVector.value, questionVector);
         // if (similarity > bestMatch.similarity) {
-          idxArr.push(similarity)
+        idxArr.push(similarity)
         // }
       }
 
@@ -279,6 +298,59 @@ const distilgpt2 = async () => {
   console.log(output)
 }
 
+
+
+
+
+
+
+
+
+
+
+// 定義問答對庫
+const dataQA = reactive([
+  { question: "今天天氣如何?", answer: "今天是個晴朗的好天氣。" },
+  // { question: "你好嗎?", answer: "我很好，謝謝你的關心！" },
+  { question: "你的名字是什麼?", answer: "我是你的智能助手。" },
+  { question: "如何新增用戶?", answer: "請至用戶管理頁面，新增人員，新增完畢臨時的密碼將會寄送至信箱，登入時再進行新密碼設定並登入" },
+  { question: "如何修改使用者權限?", answer: "請至用戶管理頁面，選擇欲修改之人員，重新選擇權限，設定完成務必請該使用者重新登入，已使頁面權限生效" },
+  { question: "如何修改密碼?", answer: "請至用戶管理頁面，選擇欲修改之人員，再行重新發送Email" },
+  { question: "甚麼是角色管理?", answer: "角色管理是可自行新增角色，並設定此角色所能使用的頁面及權限" },
+]);
+const messages = reactive([
+  { text: "你好，我是你的助手，有什麼可以幫助您的嗎？", isUser: false, isTyping: false },
+]);
+const userMessage = ref("");
+const chatBox = ref(null);
+
+const sendMessage = async () => {
+  const generator = await loadModel();
+  console.log(generator)
+  if (!userMessage.value.trim()) return;
+  messages.push({ text: userMessage.value, isUser: true, isTyping: false });
+  userMessage.value = "";
+
+  // 模擬對方的回覆
+  messages.push({ text: "", isUser: false, isTyping: true });
+  setTimeout(() => {
+    // 隱藏動畫，添加回覆
+    messages[messages.length - 1] = {
+      text: '好的，這是自動回覆的範例。',
+      isUser: false,
+      isTyping: false,
+    };
+  }, 2000); // 模擬 2 秒延遲
+
+  nextTick(() => {
+    scrollToBottom();
+  });
+};
+
+const scrollToBottom = () => {
+  const chat = chatBox.value;
+  chat.scrollTop = chat.scrollHeight;
+};
 onMounted(() => {
   console.log('模型已準備就緒');
   console.log(pipeline)
@@ -299,5 +371,140 @@ onMounted(() => {
 
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
+}
+
+
+
+
+
+
+
+
+
+
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  max-width: 600px;
+  height: 600px;
+  margin: 0 auto;
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f9f9f9;
+}
+
+.chat-box {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  background: #fff;
+}
+
+.message {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.response-message {
+  justify-content: flex-start;
+}
+
+.user-message {
+  justify-content: flex-end;
+}
+
+.message-content {
+  max-width: 60%;
+  padding: 10px 15px;
+  border-radius: 15px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.user-message .message-content {
+  background: #e6f7ff;
+  color: #333;
+  border-bottom-right-radius: 0;
+}
+
+.response-message .message-content {
+  background: #ffebcc;
+  color: #333;
+  border-bottom-left-radius: 0;
+}
+
+.typing-indicator {
+  display: flex;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background-color: #999;
+  border-radius: 50%;
+  animation: typing 1.5s infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+}
+
+.input-area {
+  display: flex;
+  padding: 10px;
+  background: #f0f0f0;
+  border-top: 1px solid #e4e4e4;
+}
+
+.input-box {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+  margin-right: 10px;
+}
+
+.input-box:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.send-button {
+  padding: 8px 15px;
+  font-size: 14px;
+  color: #fff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
 }
 </style>
