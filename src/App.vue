@@ -43,24 +43,22 @@
   </div>
 
 
-  <div id="home">
+  <!-- <div id="home">
     <section>
       <h1> 加載問答模型</h1>
-      <!-- @input="generateText" -->
       <input v-model="questionWord" placeholder="輸入文本..." />
 
       <button @click="answerer">問答</button>
     </section>
-  </div>
+  </div> -->
 
 
   <div id="home">
     <section>
-      <h1> 文本生成</h1>
-      <!-- @input="generateText" -->
-      <input v-model="distilgpt2Word" placeholder="輸入文本..." />
+      <h1>客服機器人</h1>
+      <!-- <input v-model="distilgpt2Word" placeholder="輸入文本..." />
 
-      <button @click="distilgpt2">問答</button>
+      <button @click="distilgpt2">問答</button> -->
     </section>
   </div>
 
@@ -310,13 +308,14 @@ const distilgpt2 = async () => {
 
 // 定義問答對庫
 const dataQA = reactive([
-  { question: "今天天氣如何?", answer: "今天是個晴朗的好天氣。" },
   // { question: "你好嗎?", answer: "我很好，謝謝你的關心！" },
-  { question: "你的名字是什麼?", answer: "我是你的智能助手。" },
+  // { question: "今天天氣如何?", answer: "今天是個晴朗的好天氣。" },
+  // { question: "你的名字是什麼?", answer: "我是你的智能助手。" },
   { question: "如何新增用戶?", answer: "請至用戶管理頁面，新增人員，新增完畢臨時的密碼將會寄送至信箱，登入時再進行新密碼設定並登入" },
-  { question: "如何修改使用者權限?", answer: "請至用戶管理頁面，選擇欲修改之人員，重新選擇權限，設定完成務必請該使用者重新登入，已使頁面權限生效" },
-  { question: "如何修改密碼?", answer: "請至用戶管理頁面，選擇欲修改之人員，再行重新發送Email" },
-  { question: "甚麼是角色管理?", answer: "角色管理是可自行新增角色，並設定此角色所能使用的頁面及權限" },
+  // { question: "加人進來?", answer: "請至用戶管理頁面，新增人員，新增完畢臨時的密碼將會寄送至信箱，登入時再進行新密碼設定並登入" },
+  { question: "如何權限", answer: "請至用戶管理頁面，選擇欲修改之人員，重新選擇權限，設定完成務必請該使用者重新登入，已使頁面權限生效" },
+  { question: "如何改密碼?", answer: "請至用戶管理頁面，選擇欲修改之人員，再行重新發送Email" },
+  // { question: "甚麼是角色管理?", answer: "角色管理是可自行新增角色，並設定此角色所能使用的頁面及權限" },
 ]);
 const messages = reactive([
   { text: "你好，我是你的助手，有什麼可以幫助您的嗎？", isUser: false, isTyping: false },
@@ -326,17 +325,36 @@ const chatBox = ref(null);
 
 const sendMessage = async () => {
   const generator = await loadModel();
-  console.log(generator)
+
+
   if (!userMessage.value.trim()) return;
   messages.push({ text: userMessage.value, isUser: true, isTyping: false });
+  const result = await generator(userMessage.value);
+  console.log(result.data)
+  inputVector.value = result.data;
+  let idxArr = [];
+  for (const { question, answer } of dataQA) {
+    const questionFeatures = await generator(question);
+    console.log(questionFeatures.data)
+    const questionVector = questionFeatures.data;
+    const similarity = cosineSimilarity(inputVector.value, questionVector);
+    idxArr.push(similarity)
+  }
+
+  // 將 NaN 替換為負無窮大
+  console.log(idxArr)
+  const adjustedArr = idxArr.map(val => isNaN(val) ? -Infinity : val);
+  const maxSimilarity = Math.max(...adjustedArr);
+  const bestMatchIndex = idxArr.indexOf(maxSimilarity);
+  generatedText.value = dataQA[bestMatchIndex].answer;
+
   userMessage.value = "";
 
   // 模擬對方的回覆
   messages.push({ text: "", isUser: false, isTyping: true });
   setTimeout(() => {
-    // 隱藏動畫，添加回覆
     messages[messages.length - 1] = {
-      text: '好的，這是自動回覆的範例。',
+      text: generatedText.value,
       isUser: false,
       isTyping: false,
     };
@@ -462,10 +480,12 @@ onMounted(() => {
     transform: translateY(0);
     opacity: 0.5;
   }
+
   50% {
     transform: translateY(-5px);
     opacity: 1;
   }
+
   100% {
     transform: translateY(0);
     opacity: 0.5;
