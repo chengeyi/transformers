@@ -98,10 +98,8 @@ const faq = reactive([
   { question: "甚麼是角色管理?", answer: "角色管理是可自行新增角色，並設定此角色所能使用的頁面及權限" },
 ]);
 
-// 計算餘弦相似度函數
+// 計算相似度函數
 const cosineSimilarity = (vec1, vec2) => {
-  // console.log(vec1)
-  // console.log(vec2)
   const dotProduct = vec1.reduce((sum, v, i) => sum + v * vec2[i], 0);
   const magnitude1 = Math.sqrt(vec1.reduce((sum, v) => sum + v ** 2, 0));
   const magnitude2 = Math.sqrt(vec2.reduce((sum, v) => sum + v ** 2, 0));
@@ -308,14 +306,13 @@ const distilgpt2 = async () => {
 
 // 定義問答對庫
 const dataQA = reactive([
-  // { question: "你好嗎?", answer: "我很好，謝謝你的關心！" },
-  // { question: "今天天氣如何?", answer: "今天是個晴朗的好天氣。" },
-  // { question: "你的名字是什麼?", answer: "我是你的智能助手。" },
+  { question: "你好嗎?", answer: "我很好，謝謝你的關心！" },
+  { question: "今天天氣如何?", answer: "今天是個晴朗的好天氣。" },
+  { question: "你的名字是什麼?", answer: "我是你的智能助手。" },
   { question: "如何新增用戶?", answer: "請至用戶管理頁面，新增人員，新增完畢臨時的密碼將會寄送至信箱，登入時再進行新密碼設定並登入" },
-  // { question: "加人進來?", answer: "請至用戶管理頁面，新增人員，新增完畢臨時的密碼將會寄送至信箱，登入時再進行新密碼設定並登入" },
   { question: "如何權限", answer: "請至用戶管理頁面，選擇欲修改之人員，重新選擇權限，設定完成務必請該使用者重新登入，已使頁面權限生效" },
   { question: "如何改密碼?", answer: "請至用戶管理頁面，選擇欲修改之人員，再行重新發送Email" },
-  // { question: "甚麼是角色管理?", answer: "角色管理是可自行新增角色，並設定此角色所能使用的頁面及權限" },
+  { question: "甚麼是角色管理?", answer: "角色管理是可自行新增角色，並設定此角色所能使用的頁面及權限" },
 ]);
 const messages = reactive([
   { text: "你好，我是你的助手，有什麼可以幫助您的嗎？", isUser: false, isTyping: false },
@@ -325,7 +322,6 @@ const chatBox = ref(null);
 
 const sendMessage = async () => {
   const generator = await loadModel();
-
 
   if (!userMessage.value.trim()) return;
   messages.push({ text: userMessage.value, isUser: true, isTyping: false });
