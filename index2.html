@@ -46,6 +46,7 @@
     async function run() {
         // Load and plot the original input data that we are going to train on.可視化資料分佈
         const data = await getData();
+        console.log('data', data)
         const values = data.map(d => ({
             x: d.horsepower,
             y: d.mpg,
@@ -72,8 +73,10 @@
         const { inputs, labels } = tensorData;
 
         // Train the model
+        // 這行程式碼的功能是將模型 (model) 與訓練數據 (inputs, labels) 結合，進行模型的訓練，從而讓模型學會輸入數據與輸出標籤之間的關係。
         await trainModel(model, inputs, labels);
         console.log('Done Training');
+        testModel(model, data, tensorData);
     }
 
     document.addEventListener('DOMContentLoaded', run);
@@ -115,7 +118,7 @@
         // tf.tidy 用於自動清除不再使用的中間張量，避免瀏覽器記憶體溢出。
         return tf.tidy(() => {
             // Step 1. Shuffle the data
-            tf.util.shuffle(data);
+            tf.util.shuffle(data);  
 
             // Step 2. Convert data to Tensor
             const inputs = data.map(d => d.horsepower)
@@ -191,39 +194,66 @@
     }
 
 
+    // 評估模型的預測效果
     function testModel(model, inputData, normalizationData) {
+        // (1) 提取標準化參數
+        // 作用：提取標準化所需的最大值和最小值
+        // 目的：後續進行去標準化（將預測數據還原到原始範圍）。
         const { inputMax, inputMin, labelMin, labelMax } = normalizationData;
 
         // Generate predictions for a uniform range of numbers between 0 and 1;
         // We un-normalize the data by doing the inverse of the min-max scaling
         // that we did earlier.
+        // (2) 預測與去標準化
         const [xs, preds] = tf.tidy(() => {
-
+            // 生成標準化數據：
             const xsNorm = tf.linspace(0, 1, 100);
+            // 模型預測(預測結果)
+            // 將輸入數據轉為模型可接受的形狀 [100, 1]。
+            // 使用模型進行推理，獲得預測值（標準化後的輸出）。
+            // 將標準化的數據（xsNorm）輸入到模型中，讓模型產生對應的預測結果（predictions）。
+            // 這些預測結果是基於模型學習的關係來生成的，並且仍然是標準化數據範圍內的值。
             const predictions = model.predict(xsNorm.reshape([100, 1]));
 
+            // 去標準化數據：
+            // 輸入數據還原：unNormXs 是將標準化的 xsNorm 還原到真實輸入範圍（例如汽車的馬力）。
             const unNormXs = xsNorm
                 .mul(inputMax.sub(inputMin))
                 .add(inputMin);
 
+            // unNormPreds 是將標準化的 predictions 還原到真實的目標範圍（例如汽車的油耗）。
             const unNormPreds = predictions
                 .mul(labelMax.sub(labelMin))
                 .add(labelMin);
 
             // Un-normalize the data
+            // 返回數據：
+            // 使用 .dataSync() 將 TensorFlow 的張量轉為普通的 JavaScript 陣列。
             return [unNormXs.dataSync(), unNormPreds.dataSync()];
         });
 
-
+        // (3) 構造資料點
+        // 預測點：
+        // {x: 輸入值（馬力數據）, y: 預測結果（模型預測的油耗數據）}
         const predictedPoints = Array.from(xs).map((val, i) => {
             return { x: val, y: preds[i] }
         });
 
+        // 真實數據
+        // 原始點：
+        // 從 inputData 中提取原始數據的馬力（horsepower）和油耗（mpg），格式同上。
+        // 真實值是我們希望模型能夠正確預測的結果。
+        // 從真實數據中提取輸入（x: d.horsepower）和輸出（y: d.mpg 油耗）的真實值。
+        // 結果是: 一組點，代表原始輸入值（horsepower）和對應的真實輸出值（mpg 油耗）。
         const originalPoints = inputData.map(d => ({
             x: d.horsepower, y: d.mpg,
         }));
+        // 我們希望看到的是：
+        // 模型的預測結果（點或曲線）和真實數據（點或曲線）能夠接近或一致。
+        // 如果一致，說明模型對數據的預測效果很好。
 
 
+        // (4) 可視化
         tfvis.render.scatterplot(
             { name: 'Model Predictions vs Original Data' },
             { values: [originalPoints, predictedPoints], series: ['original', 'predicted'] },
